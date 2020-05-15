@@ -1,0 +1,161 @@
+---
+title: "midterm"
+author: "21400022 YounhongKo"
+date: '2020 4 24 '
+output: html_document
+---
+
+## Import Library & Read CSV File
+```{r}
+load("midterm2020.RData")
+library(tidyr)
+library(stringr)
+```
+
+# Part 1 - Data Exploratation and Preparation
+
+## Problem 1
+Question: Get Average of ~~
+```{r}
+str(pums.sample)
+```
+> 1. 150 observation, 5 variables
+> 2. PINCP, AGEP, WKHP, JWMNP is num, SEX is character value, COW, SCHL, FER, DIS is a factor value
+> 3. sex and MAR should be factor type since it is only limited values possible.
+
+## Problem 2
+```{r}
+pums.sample$SEX <- as.character(pums.sample$SEX)
+pums.sample$SEX <- ifelse(pums.sample$SEX=="1", "Male", "Female")
+pums.sample$SEX <- as.factor(pums.sample$SEX)
+```
+> As explained on Problem1, SEX should be factor type, since it only has 2 values.
+
+## Problem 3
+```{r}
+pums.sample$MAR <- as.character(pums.sample$MAR)
+pums.sample$MAR <- 
+    ifelse(pums.sample$MAR == "1", "Married", 
+    ifelse(pums.sample$MAR == "2", "Widowed",
+    ifelse(pums.sample$MAR == "3", "Divorced",
+    ifelse(pums.sample$MAR == "4", "Separated", 
+           "Never married or under 15 years old"))))
+pums.sample$MAR <- as.factor(pums.sample$MAR)
+str(pums.sample$MAR)
+```
+> As explained on Problem1, MAR should be factor type with 5 levels.
+
+## Problem 4
+```{r}
+colSums(is.na(pums.sample))
+colSums(is.na(pums.sample)) / 2672 * 100
+```
+> FER, JWMNP has missing values of 1798, 119 each. It's percentage is about 67.2%, 4.4% each.
+
+## Problem 5
+```{r}
+total <- sum(is.na(pums.sample$FER))
+total
+
+total_male <- sum(pums.sample$SEX=="Male")
+male_fer <- sum(is.na(pums.sample$FER) & pums.sample$SEX=="Male")
+total_male - male_fer
+
+female_under15 <- sum(pums.sample$SEX=="Female" & pums.sample$AGEP<15)
+female_fer_under15 <- sum(is.na(pums.sample$FER) & pums.sample$SEX=="Female" & pums.sample$AGEP < 15)
+female_under15 - female_fer_under15
+
+female_over50 <- sum(pums.sample$SEX=="Female" & pums.sample$AGEP>50)
+female_fer_over50 <- sum(is.na(pums.sample$FER) & pums.sample$SEX=="Female" & pums.sample$AGEP > 50)
+female_over50 - female_fer_over50
+
+total - male_fer - female_fer_over50 - female_fer_under15
+```
+> 1. For all male, FER is missing
+> 2. For all female age under 15, FER is missing
+> 3. For all female age over 50, FER is missing
+> 4. There are no other missing FER values.
+
+## Problem 6
+```{r}
+summary(pums.sample)
+
+pums.sample[pums.sample$PINCP <= 0, ]
+pums.sample[pums.sample$PINCP > 500000, ]
+
+head(pums.sample[pums.sample$WKHP < 7, ])
+head(pums.sample[pums.sample$WKHP >= 90, ])
+```
+> 1. PINCP has a multiple outliers.
+> 2. PINCP has negative min value. But it needs to be checked since it can be minus income(dept).
+> 3. PINCP has max value which is about 10 times higher than 3rd quarter value. It can be true depending on where they are working.
+> 4. WKHP has very low min value which is 1. Since their income is not high, it can be true but needs to be checked.
+> 5. WKHP has very high max value which is 99. It needs to be checked whether it is exceeding working hours that government has chosen.
+> 6. Those are not obvious errors since it is a possible value.
+
+## Problem 7
+```{r}
+table(pums.sample$COW, pums.sample$SCHL)
+prop.table(table(pums.sample$COW, pums.sample$SCHL), margin = 2) * 100
+```
+> With no high school disploma, most of them are having lowest level of work. As education level increases, percentage of lowest level of work decreases, and higher level of working percentage goes up.
+
+## Problem 8
+```{r}
+pums.sample$age_income <- 
+    cut(pums.sample$AGEP, breaks = c(0, 29, 39, 49, 59, 85),
+        labels = c("Under 30", "Under 40", "Under 50", "Under 60", "Over 60"),
+        include.lowest = T)
+
+aggregate(PINCP~age_income, pums.sample, mean)
+```
+> Age over 60 has highest average income, while age under 30 has lowest average income.
+
+## Problem 9
+```{r}
+plot(x=pums.sample$WKHP, y=pums.sample$PINCP)
+```
+> 1. People with high income work about 30~60 hours per week.
+
+> 2. You can also find out that most of PINCP is populated on the bottom of graph.
+
+## Problem 10
+```{r, include=F}
+pums.sample <- pums.sample[,-11]
+```
+```{r}
+save(pums.sample, file = "st21400022.RData")
+```
+> Save pums.sample data to RData file.
+
+# Part 2 - Data Transformation
+
+## Problem 1 && Problem 2
+```{r}
+iris$id <-1:nrow(iris)
+iris.tidy <- gather(iris, PartMeasure, Value, Sepal.Length:Petal.Width)
+iris.tidy <- separate(iris.tidy, PartMeasure, into=c("Part", "Measure"))
+iris.wide <- spread(iris.tidy, Measure, Value)
+```
+> 1. To use spread function, first put id field on iris df. 
+> 2. Using gather function, gather data from Sepal.Length to Petal.Width as PartMeasure, its value to Value field, and save it as iris.tidy.
+> 3. Using separate function, separate PartMeasure into Part and Measure.
+> 4. Using spread function, spread it by Making Part data as variable name and its data as value.
+
+```{r, include=F}
+iris.wide <- iris.wide[,-2]
+iris.tidy <- iris.tidy[,-2]
+```
+```{r}
+head(iris.wide, 12)
+str(iris.wide)
+head(iris.tidy, 15)
+str(iris.tidy)
+```
+> 1. iris.wide now has 300 observations with 4 variables with Species, Part, Length, and Width.
+> 2. iris.tidy now has 600 observations with 4 variables with Species, Part, Measure, and Value.
+
+```{r}
+save(pums.sample, iris.tidy, iris.wide, file = "st21400022.RData")
+```
+> Save iris.wide and iris.tidy to RData file with pums.sample from Part1
