@@ -1,0 +1,302 @@
+---
+title: "Homework3"
+author: "21400022 YounhongKo"
+date: '2020 5 14 '
+output: html_document
+---
+
+# Part1: Single Variable Model for Regression
+
+## Import Library & Read CSV File
+```{r}
+PRSA <- read.csv(file = 'PRSA_data.csv')
+PRSA <- na.omit(PRSA)
+prsa.train <- subset(PRSA, year <= 2013)
+prsa.test <- subset(PRSA, year > 2013)
+```
+
+## 1
+```{r}
+plot(prsa.train$TEMP, prsa.train$DEWP)
+```
+
+>> Temperature increases in proportion to dew point
+```{r}
+plot(prsa.train$DEWP, prsa.train$PRES)
+```
+
+>> As dew point increase, pressure tends to decrease(inverse proportion)
+```{r}
+plot(prsa.train$Iws, prsa.train$Is)
+```
+
+>> Cumulated hour of snow is mostly low but high value of Is is mostly from Iws lower than 150
+```{r}
+plot(prsa.train$TEMP, prsa.train$month)
+```
+
+>> Temparature is max on July
+```{r}
+plot(prsa.train$Ir, prsa.train$month)
+```
+
+>> Max cumulated hours of rain is from September.
+```{r}
+plot(prsa.train$Is, prsa.train$month)
+```
+
+>> Max cumulated hour of snow is from January, followed by Februrary, December. So, it snows most in winter. 
+```{r}
+plot(prsa.train$Iws, prsa.train$month)
+```
+
+>> Max cumulated speed of wind is found in December
+```{r}
+plot(prsa.train$TEMP, prsa.train$Is)
+```
+
+>> High cumulated hour of snow is from temperature about -10 to 0. 
+```{r}
+plot(prsa.train$TEMP, prsa.train$Iws)
+```
+
+>> High cumulated wind speed is from tempearture between -10 and 0.
+```{r}
+plot(prsa.train$Iws, prsa.train$DEWP)
+```
+
+>> Cumulated wind speed is high from dew point about -20.
+
+## 2
+```{r}
+sv_reg_cbwd <- tapply(prsa.train$pm2.5, prsa.train$cbwd, mean)
+prsa.train$pred_pm <- sv_reg_cbwd[prsa.train$cbwd]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean(prsa.train$error ** 2))
+
+summary(prsa.train$DEWP)
+prsa.train$dewp_group <- cut(prsa.train$DEWP, breaks = c(-40, -20, 0, 20, 40),
+                             labels = c('-40 ~ -20', '-20 ~ 0', '0 ~ 20', '20 ~ 40'),
+                             right = F)
+sv_reg_dewp <- tapply(prsa.train$pm2.5, prsa.train$dewp_group, mean)
+prsa.train$pred_pm <- sv_reg_dewp[prsa.train$dewp_group]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean(prsa.train$error ** 2))
+
+summary(prsa.train$TEMP)
+prsa.train$temp_group <- cut(prsa.train$TEMP, breaks = c(-20, 0, 20, 40, 60),
+                             labels = c('-20 ~ 0', '0 ~ 20', '20 ~ 40', '40 ~ 60'),
+                             right = F)
+sv_reg_temp <- tapply(prsa.train$pm2.5, prsa.train$temp_group, mean)
+prsa.train$pred_pm <- sv_reg_temp[prsa.train$temp_group]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean(prsa.train$error ** 2))
+
+summary(prsa.train$PRES)
+prsa.train$pres_group <- cut(prsa.train$PRES, breaks = c(990, 1010, 1030, 1050),
+                             labels = c('1', '2', '3'),
+                             right = F)
+sv_reg_pres <- tapply(prsa.train$pm2.5, prsa.train$pres_group, mean)
+prsa.train$pred_pm <- sv_reg_pres[prsa.train$pres_group]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean((prsa.train$error ** 2)))
+
+summary(prsa.train$Is)
+prsa.train$is <- as.numeric(prsa.train$Is)
+prsa.train$is_group <- cut(prsa.train$is, breaks = c(0, 10.0, 20.0, 30.0),
+                             labels = c('1', '2', '3'),
+                             right = F)
+
+sv_reg_is <- tapply(prsa.train$pm2.5, prsa.train$is_group, mean)
+prsa.train$pred_pm <- sv_reg_pres[prsa.train$is_group]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean((prsa.train$error ** 2)))
+
+summary(prsa.train$Iws)
+prsa.train$iws_group <- cut(prsa.train$Iws, breaks = c(0, 100, 200, 300, 400, 500, 600),
+                            labels = c('1', '2', '3', '4', '5', '5'),
+                            right = F)
+sv_reg_iws <- tapply(prsa.train$pm2.5, prsa.train$iws_group, mean)
+prsa.train$pred_pm <- sv_reg_iws[prsa.train$iws_group]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean(prsa.train$error ** 2))
+
+summary(prsa.train$Ir)
+prsa.train$ir_group <- cut(prsa.train$Ir, breaks = c(0, 10, 20, 30, 40),
+                            labels = c('1', '2', '3', '4'),
+                            right = F)
+sv_reg_ir <- tapply(prsa.train$pm2.5, prsa.train$ir_group, mean)
+prsa.train$pred_pm <- sv_reg_ir[prsa.train$ir_group]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+sqrt(mean(prsa.train$error ** 2))
+```
+>> Chose combined wind direction as best single variable model, since it has lowest RMSE result.
+
+## 3
+```{r}
+sv_reg_cbwd <- tapply(prsa.train$pm2.5, prsa.train$cbwd, mean)
+prsa.train$pred_pm <- sv_reg_cbwd[prsa.train$cbwd]
+prsa.train$error <- prsa.train$pm2.5 - prsa.train$pred_pm
+MSE_train <- mean(prsa.train$error ** 2)
+RMSE_train <- sqrt(MSE_train)
+RMSE_train
+RSS <- sum(prsa.train$error ** 2)
+SStot <- sum((prsa.train$pm2.5 - mean(prsa.train$pm2.5)) ** 2)
+Rsq <- 1 - RSS/SStot
+print(Rsq)
+```
+>> In train data RMSE is 89.67, Rsq is 0.06
+
+## 4
+```{r}
+prsa.test$pred_pm <- sv_reg_cbwd[prsa.test$cbwd]
+prsa.test$error <- prsa.test$pm2.5 - prsa.test$pred_pm
+MSE_test <- mean(prsa.test$error ** 2)
+RMSE_test <- sqrt(MSE_test)
+RMSE_test
+RSS <- sum(prsa.test$error ** 2)
+SStot = sum((prsa.test$pm2.5 - mean(prsa.test$pm2.5)) ** 2)
+Rsq = 1 - RSS/SStot 
+Rsq
+```
+>> In test data RSME is 92.07, Rsq is 0.03
+
+## 5
+>> This model is not overfitting. Reason is that train model prediction has slightly lower result than from test model.
+
+## 6
+>> Checked with 21500802 홍영준, and our result seemed to have not big difference.
+
+## 7
+```{r}
+plot(y=prsa.train$pm2.5, x=prsa.train$pred_pm)
+plot(y=prsa.test$pm2.5, x=prsa.test$pred_pm)
+```
+
+>> With scatter plot, we can find that train data is quite accurate to predict test data since those two graphs don't make much difference.
+
+# Part2: Single Variable Model for Classification
+
+## Import Library & Read RData File & Declare Function
+```{r}
+load(file = "bankruptcy.RData")
+library(ROCR)
+calAUC <- function(predCol, targetCol){
+  perf <- performance(prediction(predCol, targetCol), 'auc')
+  as.numeric(perf@y.values)
+}
+```
+
+## 1
+```{r}
+tble <- table(bankruptcy_train$`Industrial Risk`, bankruptcy_train$Class)
+sv_model_ir <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_ir[bankruptcy_train$`Industrial Risk`]
+bankruptcy_test$est_prob <- sv_model_ir[bankruptcy_test$`Industrial Risk`]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+
+tble <- table(bankruptcy_train$`Management Risk`, bankruptcy_train$Class)
+sv_model_mr <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_mr[bankruptcy_train$`Management Risk`]
+bankruptcy_test$est_prob <- sv_model_mr[bankruptcy_test$`Management Risk`]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+
+tble <- table(bankruptcy_train$`Financial Flexibility`, bankruptcy_train$Class)
+sv_model_ff <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_ff[bankruptcy_train$`Financial Flexibility`]
+bankruptcy_test$est_prob <- sv_model_ff[bankruptcy_test$`Financial Flexibility`]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+
+tble <- table(bankruptcy_train$Credibility, bankruptcy_train$Class)
+sv_model_cr <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_cr[bankruptcy_train$Credibility]
+bankruptcy_test$est_prob <- sv_model_cr[bankruptcy_test$Credibility]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+
+tble <- table(bankruptcy_train$Competitiveness, bankruptcy_train$Class)
+sv_model_co <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_co[bankruptcy_train$Competitiveness]
+bankruptcy_test$est_prob <- sv_model_co[bankruptcy_test$Competitiveness]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+
+tble <- table(bankruptcy_train$`Operating Risk`, bankruptcy_train$Class)
+sv_model_or <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_or[bankruptcy_train$`Operating Risk`]
+bankruptcy_test$est_prob <- sv_model_or[bankruptcy_test$`Operating Risk`]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+```
+>> Chose competitiveness as best single variable model since it has maximum AUC. Its AUC for train data is about 0.9923.
+
+## 2
+```{r, include=F}
+tble <- table(bankruptcy_train$Competitiveness, bankruptcy_train$Class)
+sv_model_co <- prop.table(tble, margin = 1)[,2]
+bankruptcy_train$est_prob <- sv_model_co[bankruptcy_train$Competitiveness]
+bankruptcy_test$est_prob <- sv_model_co[bankruptcy_test$Competitiveness]
+calAUC(bankruptcy_train$est_prob, bankruptcy_train$Class)
+```
+
+```{r}
+calAUC(bankruptcy_test$est_prob, bankruptcy_test$Class)
+```
+>> AUC for test data is 1.
+
+## 3
+>> This model is not overfitting. Reason is that train model prediction has slightly lower result than from test model.
+
+## 4
+```{r}
+plot(performance(prediction(bankruptcy_train$est_prob, 
+                            bankruptcy_train$Class),'prec', 'cutoff'))
+plot(performance(prediction(bankruptcy_train$est_prob, 
+                            bankruptcy_train$Class),'rec', 'cutoff'))
+
+plot(performance(prediction(bankruptcy_test$est_prob, 
+                            bankruptcy_test$Class),'prec', 'cutoff'))
+plot(performance(prediction(bankruptcy_test$est_prob, 
+                            bankruptcy_test$Class),'rec', 'cutoff'))
+                            
+performance(prediction(bankruptcy_train$est_prob, 
+                            bankruptcy_train$Class),'rec', 'cutoff')@x.values
+performance(prediction(bankruptcy_test$est_prob, 
+                            bankruptcy_test$Class),'rec', 'cutoff')@x.values
+```
+>> Precision increase as threshold increase, and threshold is max when threshold is lower than 0.91.   
+>> On this model, recall is more important, it is good to choose recall is max which is about 0.9
+
+## 5
+```{r}
+plot(performance(prediction(bankruptcy_test$est_prob, 
+          bankruptcy_test$Class),'f', 'cutoff'))
+performance(prediction(bankruptcy_test$est_prob, 
+          bankruptcy_test$Class),'f', 'cutoff')@x.values
+```
+>> From graph, F1 is max on about 0.904
+
+## 6
+```{r}
+?performance
+plot(performance(prediction(bankruptcy_train$est_prob, 
+           bankruptcy_train$Class),'tpr', 'fpr'))
+plot(performance(prediction(bankruptcy_test$est_prob, 
+           bankruptcy_test$Class),'tpr', 'fpr'))
+```
+
+>> From graph, we can see that false positive rate is mostly 1.0 for both train and test data.
+
+## 7
+```{r}
+plot(performance(prediction(bankruptcy_train$est_prob, 
+           bankruptcy_train$Class),'acc', 'cutoff'))
+performance(prediction(bankruptcy_train$est_prob, 
+           bankruptcy_train$Class),'acc', 'cutoff')@x.values
+           
+plot(performance(prediction(bankruptcy_test$est_prob, 
+           bankruptcy_test$Class),'acc', 'cutoff'))
+performance(prediction(bankruptcy_test$est_prob, 
+           bankruptcy_test$Class),'acc', 'cutoff')@x.values
+```
+>> Threshold is max when threshold is about 0.904
+
+## 8
+>> Checked with 21500802 홍영준, and our result seemed to have not big difference.
