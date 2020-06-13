@@ -1,0 +1,175 @@
+---
+title: "Homework5"
+author: "21400022 YounhongKo"
+date: '2020 6 5 '
+output: html_document
+---
+
+## Read RData File
+```{r}
+load('hw5_student.RData')
+```
+
+## Declare Functions && Libraries
+```{r}
+library(ROCR)
+calcRMSE <- function(label, estimation){
+  return(sqrt(mean((label - estimation) ** 2)))
+}
+calcR2 <- function(label, estimation){
+  RSS = sum((label - estimation) ** 2)
+  SStot = sum((label - mean(label)) ** 2)
+  return(1-RSS/SStot)
+}
+getRecall <- function(i) {
+  conf.credit.train <- table(pred=credit_train$pred>i, actual=credit_train$default.payment.next.month)
+  conf.credit.train[2,2]/sum(conf.credit.train[,2])
+}
+calAUC <- function(predCol, targetCol){
+  perf <- performance(prediction(predCol, targetCol), 'auc')
+  as.numeric(perf@y.values)
+}
+```
+
+
+# Part 1 Linear Regression Model
+
+## Question 1
+```{r}
+student_model <- lm(G3 ~ ., student.train)
+student_model
+summary(student_model)
+```
+
+## Question 2
+```{r}
+student.train$pred <- predict(student_model, newdata = student.train)
+student.test.nolabel$pred <- predict(student_model, newdata = student.test.nolabel)
+calcRMSE(student.train$G3, student.train$pred)
+calcR2(student.train$G3, student.train$pred)
+```
+>> RMSE for train: 3.25, R2 for train: 0.295   
+>> RMSE for test: 3.42, R2 for test: 0.179
+
+## Question 3
+>> Variables that affect Final Grade has high value of coeffient value for model. And as you can see from summary(student_model), they are marked with * next to p value.
+
+>> Variables that affect Negatively: failures, schoolyes, schoolMS
+
+>> Variables that affect Positively: classport higheryes, famsizeLE3, studytime
+
+## Question 4
+```{r}
+student_model <- lm(G3 ~ . + I(studytime^2)+I(health^2), student.train)
+student.train$pred <- predict(student_model, newdata = student.train)
+
+calcRMSE(student.train$G3, student.train$pred)
+calcR2(student.train$G3, student.train$pred)
+```
+>> RMSE: 3.159, R2: 0.334
+>> Adding field increases R2 and decreases RMSE.
+
+## Question 5
+```{r}
+student_model <- lm(G3 ~ school + address + famsize + Pstatus + Medu + Fedu + Mjob + Fjob + reason
+                    + guardian + traveltime + studytime + failures + schoolsup + famsup + paid + nursery
+                    + higher + internet + romantic + famrel + freetime + goout + Dalc + Walc + health
+                    + absences + class, student.train)
+
+student.train$pred <- predict(student_model, newdata = student.train)
+
+calcRMSE(student.train$G3, student.train$pred)
+calcR2(student.train$G3, student.train$pred)
+```
+>> Since activities, age, sex has low coefficients values, it does not have much effect on grade. After we delete those variables from model, we can find that RMSE has increased by little and R2 has decreased by little which means performance has been less accurate and downgraded.
+
+## Question 6
+```{r}
+student_model <- lm(G3 ~ . + I(studytime^2)+I(health^2), student.train)
+student.train$pred <- predict(student_model, newdata = student.train)
+student.test.nolabel$pred <- predict(student_model, newdata = student.test.nolabel)
+pred_grade_test <- student.test.nolabel$pred
+save(pred_grade_test, file="st21400022.RData")
+```
+>> RMSE: 3.42, R2: 0.178
+
+# Part 2 - Logistic Regression Model
+
+## Question 1
+```{r}
+fmla <- "default.payment.next.month~."
+credit_model <- glm(fmla, data=credit_train, family = binomial(link='logit'))
+credit_model
+summary(credit_model)
+coefficients(credit_model)
+credit_train$pred <- predict(credit_model, newdata = credit_train, type="response")
+credit_test$pred <- predict(credit_model, newdata = credit_test, type="response")
+```
+
+## Question 2
+```{r}
+calAUC(credit_train$pred, credit_train$default.payment.next.month)
+```
+>> 0.724
+
+## Question 3
+```{r}
+threshold <- 0.5
+
+conf.credit.train <- table(pred=credit_train$pred>threshold, actual=credit_train$default.payment.next.month)
+credit_train_prec <- conf.credit.train[2,2]/sum(conf.credit.train[2,])
+credit_train_prec
+credit_train_rec <- conf.credit.train[2,2]/sum(conf.credit.train[,2])
+credit_train_rec
+credit_train_acc <- sum(diag(conf.credit.train)) / sum(conf.credit.train)
+credit_train_acc
+
+thres_list <- seq(0.01, 0.50, 0.01)
+rec_list <- sapply(thres_list, getRecall)
+plot(x=thres_list, rec_list, xlab="Threshold", ylab="Recall", type="l")
+```
+
+>> In this model, recall costs more than precision so false positive costs more than false negative. So, to increase recall you can try adjusting threshold value. If you lower threshold, you get higher value of recall.
+
+>> You can easily find that recall is highest when threshold is lowest. So, let's set threshold as 0.01 and recalculate accuracy, precision, and recall.
+
+```{r}
+thres_list <- 0.01
+
+conf.credit.train <- table(pred=credit_train$pred>threshold, actual=credit_train$default.payment.next.month)
+credit_train_prec <- conf.credit.train[2,2]/sum(conf.credit.train[2,])
+credit_train_prec
+credit_train_rec <- conf.credit.train[2,2]/sum(conf.credit.train[,2])
+credit_train_rec
+credit_train_acc <- sum(diag(conf.credit.train)) / sum(conf.credit.train)
+credit_train_acc
+```
+
+## Question 4
+```{r}
+fmla <- "default.payment.next.month~.+I(AGE^2)+I(EDUCATION^2)+I(MARRIAGE^2)+I(PAY_AMT2^2)+I(PAY_AMT3^2)"
+credit_model <- glm(fmla, data=credit_train, family = binomial(link='logit'))
+
+credit_train$pred <- predict(credit_model, newdata = credit_train, type="response")
+credit_test$pred <- predict(credit_model, newdata = credit_test, type="response")
+
+calAUC(credit_train$pred, credit_train$default.payment.next.month)
+
+conf.credit.train <- table(pred=credit_train$pred>threshold, actual=credit_train$default.payment.next.month)
+credit_train_prec <- conf.credit.train[2,2]/sum(conf.credit.train[2,])
+credit_train_prec
+credit_train_rec <- conf.credit.train[2,2]/sum(conf.credit.train[,2])
+credit_train_rec
+credit_train_acc <- sum(diag(conf.credit.train)) / sum(conf.credit.train)
+credit_train_acc
+```
+
+>> AUC for test data(from website): 0.729
+
+## Question 5
+```{r}
+prob_default_test <- credit_test$pred
+pred_default_test <- credit_test$pred > threshold
+save(prob_default_test, pred_grade_test, pred_default_test, file="st21400022.RData")
+```
+>> Accuracy: 0.815, Precision: 0.691, Recall: 0.279
